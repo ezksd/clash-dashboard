@@ -6,7 +6,7 @@ import classnames from 'classnames'
 import './style.scss'
 
 interface TagsProps extends BaseComponentProps, I18nProps {
-    data: [string]
+    data: string[]
     onClick: (name: string) => void
     select: string
     rowHeight: number

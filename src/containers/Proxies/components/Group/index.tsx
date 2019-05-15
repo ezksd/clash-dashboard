@@ -21,7 +21,6 @@ export class Group extends React.Component<GroupProps, {}> {
 
     render () {
         const { config } = this.props
-        // const proxies = new Set(config.all)
         const canClick = config.type === 'Selector'
         return (
             <div className="proxy-group">
