@@ -7,7 +7,6 @@
     display: flex;
     margin-right: calc(-1 * var(--gap));
     margin-top: 20px;
-    padding-bottom: 100px;
     flex-wrap: wrap;
     align-content: flex-start;
     list-style: none;
@@ -37,10 +36,6 @@
     }
 
     @include response(xxs) {
-        --columns: 4;
-    }
-
-    @include response(tiny) {
         --columns: 3;
     }
 
@@ -61,10 +56,41 @@
     margin: 20px 0;
 }
 
+.proxies-container .proxies-action-icon {
+    margin-left: 10px;
+}
+
 .proxies-speed-test {
     line-height: 32px;
     margin: 0 2px 0 6px;
     color: $color-primary-dark;
     text-shadow: 0 2px 6px rgba($color: $color-primary-dark, $alpha: 0.4);
     cursor: pointer;
+}
+
+.proxies-providers-item {
+    margin: 20px 0;
+}
+
+.proxies-providers-list {
+    list-style: none;
+}
+
+@media (max-width: 768px) {
+    .proxies-group-card {
+        margin: 12px 0;
+    }
+
+    .proxies-list {
+        margin-right: 0;
+        padding-bottom: 20px;
+        flex-wrap: unset;
+        flex-direction: column;
+
+        > li {
+            width: 100%;
+            margin-right: 0;
+            margin-bottom: 10px;
+        }
+    }
 }

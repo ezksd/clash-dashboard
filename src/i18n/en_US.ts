@@ -4,7 +4,9 @@ export default {
         Overview: 'Overview',
         Logs: 'Logs',
         Rules: 'Rules',
-        Settings: 'Setting'
+        Settings: 'Setting',
+        Connections: 'Connections',
+        Version: 'Version'
     },
     Settings: {
         title: 'Settings',
@@ -39,7 +41,34 @@ export default {
         title: 'Logs'
     },
     Rules: {
-        title: 'Rules'
+        title: 'Rules',
+        providerTitle: 'Providers',
+        providerUpdateTime: 'Last updated at',
+        ruleCount: 'Rule count'
+    },
+    Connections: {
+        title: 'Connections',
+        keepClosed: 'Keep closed connections',
+        total: {
+            text: 'total',
+            upload: 'upload',
+            download: 'download'
+        },
+        closeAll: {
+            title: 'Warning',
+            content: 'This would close all connections'
+        },
+        columns: {
+            host: 'Host',
+            network: 'Network',
+            type: 'Type',
+            chains: 'Chains',
+            rule: 'Rule',
+            time: 'Time',
+            speed: 'Speed',
+            upload: 'Upload',
+            download: 'Download'
+        }
     },
     Proxies: {
         title: 'Proxies',
@@ -59,8 +88,15 @@ export default {
             tls: 'TLS'
         },
         groupTitle: 'Policy Group',
+        providerTitle: 'Providers',
+        providerUpdateTime: 'Last updated at',
         expandText: 'Expand',
         collapseText: 'Collapse',
-        speedTestText: 'Speed Test'
+        speedTestText: 'Speed Test',
+        breakConnectionsText: 'Close connections which include the group'
+    },
+    Modal: {
+        ok: 'Ok',
+        cancel: 'Cancel'
     }
 }

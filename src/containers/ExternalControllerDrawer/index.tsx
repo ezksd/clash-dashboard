@@ -1,96 +1,77 @@
-import * as React from 'react'
-import { translate } from 'react-i18next'
-import { inject, observer } from 'mobx-react'
-import { storeKeys } from '@lib/createStore'
+import React, { useEffect } from 'react'
+import { useObject } from '@lib/hook'
 import { Modal, Input, Row, Col, Alert } from '@components'
-import { BaseProps, I18nProps } from '@models'
+import { useI18n, useAPIInfo, useIdentity } from '@stores'
 import './style.scss'
 
-interface ExternalControllerModalProps extends I18nProps, BaseProps {}
-
-interface ExternalControllerModalState {
-    hostname: string
-    port: string
-    secret: string
-}
-
-@inject(...storeKeys)
-@observer
-class ExternalController extends React.Component<ExternalControllerModalProps, ExternalControllerModalState> {
-
-    state = {
+export default function ExternalController () {
+    const { useTranslation } = useI18n()
+    const { t } = useTranslation('Settings')
+    const { data: info, update, fetch } = useAPIInfo()
+    const { identity, set: setIdentity } = useIdentity()
+    const [value, set] = useObject({
         hostname: '',
         port: '',
         secret: ''
+    })
+
+    useEffect(() => {
+        fetch()
+    }, [])
+
+    useEffect(() => {
+        set({ hostname: info.hostname, port: info.port, secret: info.secret })
+    }, [info])
+
+    function handleOk () {
+        const { hostname, port, secret } = value
+        update({ hostname, port, secret })
     }
 
-    private handleOk = () => {
-        const { hostname, port, secret } = this.state
-        this.props.store.updateAPIInfo({ hostname, port, secret })
-    }
-
-    private handleCancel = () => {
-        this.props.store.setShowAPIModal(false)
-    }
-
-    async componentWillMount () {
-        await this.props.store.fetchAPIInfo()
-        const info = this.props.store.apiInfo
-        this.setState({ hostname: info.hostname, port: info.port, secret: info.secret })
-    }
-
-    render () {
-        const { t } = this.props
-        const { hostname, port, secret } = this.state
-        const show = this.props.store.showAPIModal
-
-        return (
-            <Modal
-                show={show}
-                title={t('externalControllerSetting.title')}
-                bodyClassName="external-controller"
-                onClose={this.handleCancel}
-                onOk={this.handleOk}
-            >
-                <Alert type="info" inside={true}>
-                    <p>{t('externalControllerSetting.note')}</p>
-                </Alert>
-                <Row gutter={24} align="middle">
-                    <Col span={4} className="title">{t('externalControllerSetting.host')}</Col>
-                    <Col span={20} className="form">
-                        <Input
-                            align="left"
-                            inside={true}
-                            value={hostname}
-                            onChange={hostname => this.setState({ hostname })}
-                        />
-                    </Col>
-                </Row>
-                <Row gutter={24} align="middle">
-                    <Col span={4} className="title">{t('externalControllerSetting.port')}</Col>
-                    <Col span={20} className="form">
-                        <Input
-                            align="left"
-                            inside={true}
-                            value={port}
-                            onChange={port => this.setState({ port })}
-                        />
-                    </Col>
-                </Row>
-                <Row gutter={24} align="middle">
-                    <Col span={4} className="title">{t('externalControllerSetting.secret')}</Col>
-                    <Col span={20} className="form">
-                        <Input
-                            align="left"
-                            inside={true}
-                            value={secret}
-                            onChange={secret => this.setState({ secret })}
-                        />
-                    </Col>
-                </Row>
-            </Modal>
-        )
-    }
+    return (
+        <Modal
+            show={!identity}
+            title={t('externalControllerSetting.title')}
+            bodyClassName="external-controller"
+            onClose={() => setIdentity(true)}
+            onOk={handleOk}
+        >
+            <Alert type="info" inside={true}>
+                <p>{t('externalControllerSetting.note')}</p>
+            </Alert>
+            <Row gutter={24} align="middle">
+                <Col span={4} className="title">{t('externalControllerSetting.host')}</Col>
+                <Col span={20} className="form">
+                    <Input
+                        align="left"
+                        inside={true}
+                        value={value.hostname}
+                        onChange={hostname => set('hostname', hostname)}
+                    />
+                </Col>
+            </Row>
+            <Row gutter={24} align="middle">
+                <Col span={4} className="title">{t('externalControllerSetting.port')}</Col>
+                <Col span={20} className="form">
+                    <Input
+                        align="left"
+                        inside={true}
+                        value={value.port}
+                        onChange={port => set('port', port)}
+                    />
+                </Col>
+            </Row>
+            <Row gutter={24} align="middle">
+                <Col span={4} className="title">{t('externalControllerSetting.secret')}</Col>
+                <Col span={20} className="form">
+                    <Input
+                        align="left"
+                        inside={true}
+                        value={value.secret}
+                        onChange={secret => set('secret', secret)}
+                    />
+                </Col>
+            </Row>
+        </Modal>
+    )
 }
-
-export default translate(['Settings'])(ExternalController)

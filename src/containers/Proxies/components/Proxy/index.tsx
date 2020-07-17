@@ -1,93 +1,69 @@
-import * as React from 'react'
+import React, { useMemo, useLayoutEffect } from 'react'
 import classnames from 'classnames'
-import { BaseComponentProps, TagColors } from '@models'
+import { BaseComponentProps } from '@models'
+import { useProxy } from '@stores'
 import { getProxyDelay, Proxy as IProxy } from '@lib/request'
 import EE, { Action } from '@lib/event'
 import { isClashX, jsBridge } from '@lib/jsBridge'
-import { to, getLocalStorageItem, setLocalStorageItem, sample } from '@lib/helper'
+import { to } from '@lib/helper'
 import './style.scss'
 
 interface ProxyProps extends BaseComponentProps {
     config: IProxy
-    // onEdit?: (e: React.MouseEvent<HTMLElement>) => void
 }
 
-interface ProxyState {
-    delay: number
-    hasError: boolean
-    color: string
+const TagColors = {
+    '#909399': 0,
+    '#00c520': 260,
+    '#ff9a28': 600,
+    '#ff3e5e': Infinity
 }
 
-export class Proxy extends React.Component<ProxyProps , ProxyState> {
-    constructor (props) {
-        super(props)
-
-        const { config } = props
-        const { name } = config
-        let color = getLocalStorageItem(name)
-
-        if (!color) {
-            color = sample(TagColors)
-            setLocalStorageItem(name, color)
-        }
-
-        this.state = {
-            delay: -1,
-            hasError: false,
-            color
-        }
+async function getDelay (name: string) {
+    if (isClashX()) {
+        const delay = await jsBridge.getProxyDelay(name)
+        return delay
     }
 
-    componentWillUpdate () {
-        const { config: { name } } = this.props
-        const { color: rawColor } = this.state
-        const color = getLocalStorageItem(name)
+    const { data: { delay } } = await getProxyDelay(name)
+    return delay
+}
 
-        if (rawColor !== color) {
-            this.setState({ color })
-        }
-    }
+export function Proxy (props: ProxyProps) {
+    const { config, className } = props
+    const { set } = useProxy()
 
-    componentDidMount () {
-        EE.subscribe(Action.SPEED_NOTIFY, this.speedTest)
-    }
+    async function speedTest () {
+        const [delay, err] = await to(getDelay(config.name))
 
-    componentWillUnmount () {
-        EE.unsubscribe(Action.SPEED_NOTIFY, this.speedTest)
-    }
-
-    speedTest = async () => {
-        const { config } = this.props
-        if (isClashX()) {
-            const delay = await jsBridge.getProxyDelay(config.name)
-            if (delay === 0) {
-                return this.setState({ hasError: true })
+        const validDelay = err ? 0 : delay
+        set(draft => {
+            const proxy = draft.proxies.find(p => p.name === config.name)
+            if (proxy) {
+                proxy.history.push({ time: Date.now().toString(), delay: validDelay })
             }
-            return this.setState({ delay })
-        }
-
-        const [res, err] = await to(getProxyDelay(config.name))
-
-        if (err) {
-            return this.setState({ hasError: true })
-        }
-
-        const { data: { delay } } = res
-        this.setState({ delay })
+        })
     }
 
-    render () {
-        const { config, className } = this.props
-        const { delay, color, hasError } = this.state
-        const backgroundColor = hasError ? undefined : color
+    const delay = useMemo(
+        () => config.history?.length ? config.history.slice(-1)[0].delay : 0,
+        [config]
+    )
 
-        return (
-            <div className={classnames('proxy-item', { 'proxy-error': hasError }, className)}>
-                <span className="proxy-type" style={{ backgroundColor }}>{config.type}</span>
-                <p className="proxy-name">{config.name}</p>
-                <p className="proxy-delay">{delay === -1 ? '-' : `${delay}ms`}</p>
-                {/* <Icon className="proxy-editor" type="setting" onClick={onEdit} /> */}
-            </div>
-        )
-    }
+    useLayoutEffect(() => {
+        EE.subscribe(Action.SPEED_NOTIFY, speedTest)
+        return () => EE.unsubscribe(Action.SPEED_NOTIFY, speedTest)
+    }, [])
+
+    const hasError = useMemo(() => delay === 0, [delay])
+    const color = useMemo(() => Object.keys(TagColors).find(threshold => delay <= TagColors[threshold]), [delay])
+
+    const backgroundColor = hasError ? undefined : color
+    return (
+        <div className={classnames('proxy-item', { 'proxy-error': hasError }, className)}>
+            <span className="proxy-type" style={{ backgroundColor }}>{config.type}</span>
+            <p className="proxy-name">{config.name}</p>
+            <p className="proxy-delay">{delay === 0 ? '-' : `${delay}ms`}</p>
+        </div>
+    )
 }

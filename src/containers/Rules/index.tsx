@@ -1,27 +1,54 @@
-import * as React from 'react'
-import { translate } from 'react-i18next'
+import React, { useLayoutEffect } from 'react'
 import { Header, Card, Row, Col } from '@components'
-import { I18nProps, BaseRouterProps } from '@models'
+import { useI18n, useRule, useRuleProviders, useVersion } from '@stores'
+import { FixedSizeList as List } from 'react-window'
+import AutoSizer from 'react-virtualized-auto-sizer'
+import useSWR from 'swr'
+import { Provider } from './Provider'
 import './style.scss'
-import { storeKeys } from '@lib/createStore'
-import { inject, observer } from 'mobx-react'
-import { List, AutoSizer } from 'react-virtualized'
 
-interface RulesProps extends BaseRouterProps, I18nProps {}
+function RuleProviders () {
+    const { providers, update } = useRuleProviders()
+    const { premium } = useVersion()
+    const { useTranslation } = useI18n()
+    const { t } = useTranslation('Rules')
 
-@inject(...storeKeys)
-@observer
-class Rules extends React.Component<RulesProps, {}> {
+    useLayoutEffect(() => {
+        if (premium) {
+            update()
+        }
+    }, [premium])
 
-    componentWillMount () {
-        this.props.store.fetchData()
-    }
+    return <>
+        {
+            providers.length !== 0 &&
+            <div className="proxies-container">
+                <Header title={t('providerTitle')} />
+                <ul className="proxies-providers-list">
+                    {
+                        providers.map(p => (
+                            <li className="proxies-providers-item" key={p.name}>
+                                <Provider provider={p} />
+                            </li>
+                        ))
+                    }
+                </ul>
+            </div>
+        }
+    </>
+}
 
-    renderRuleItem = ({ index, key, style }) => {
-        const { rules } = this.props.store.data
+export default function Rules () {
+    const { rules, update } = useRule()
+    const { useTranslation } = useI18n()
+    const { t } = useTranslation('Rules')
+
+    useSWR('rules', update)
+
+    function renderRuleItem ({ index, style }: { index: number, style: React.CSSProperties }) {
         const rule = rules[index]
         return (
-            <li className="rule-item" key={key} style={style}>
+            <li className="rule-item" style={style}>
                 <Row className="rule-item-row" gutter={24} align="middle">
                     <Col className="rule-type" span={6} offset={1}>
                         { rule.type }
@@ -37,31 +64,26 @@ class Rules extends React.Component<RulesProps, {}> {
         )
     }
 
-    render () {
-        const { t } = this.props
-        const { rules } = this.props.store.data
-        return (
-            <div className="page">
-                <Header title={t('title')} />
-                <Card className="rules-card">
-                    <AutoSizer className="rules">
-                        {
-                            ({ height, width }) => (
-                                <List
-                                    height={height}
-                                    width={width}
-                                    rowCount={rules.length}
-                                    rowRenderer={this.renderRuleItem}
-                                    rowHeight={50}
-                                    overscanRowCount={10}
-                                />
-                            )
-                        }
-                    </AutoSizer>
-                </Card>
-            </div>
-        )
-    }
+    return (
+        <div className="page">
+            <RuleProviders />
+            <Header title={t('title')} />
+            <Card className="rules-card">
+                <AutoSizer className="rules">
+                    {
+                        ({ height, width }) => (
+                            <List
+                                height={height}
+                                width={width}
+                                itemCount={rules.length}
+                                itemSize={50}
+                            >
+                                { renderRuleItem }
+                            </List>
+                        )
+                    }
+                </AutoSizer>
+            </Card>
+        </div>
+    )
 }
-
-export default translate(['Rules'])(Rules)

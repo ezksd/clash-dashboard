@@ -64,18 +64,8 @@ export interface Config {
 
 }
 
-export interface ClashXData {
-    startAtLogin: boolean
-    systemProxy: boolean
-}
-
-export interface APIInfo {
-    hostname: string
-    port: string
-    secret?: string
-}
-
 export interface Data {
+    version?: string
 
     general?: {
 
@@ -102,7 +92,7 @@ export interface Data {
         /**
          * clash proxy mode
          */
-        mode?: string
+        mode?: 'script' | 'rule' | 'direct' | 'global'
 
         /**
          * clash tty log level
@@ -114,5 +104,9 @@ export interface Data {
 
     proxyGroup?: API.Group[]
 
+    proxyProviders?: API.Provider[]
+
     rules?: API.Rule[]
+
+    proxyMap?: Map<string, API.Proxy>
 }

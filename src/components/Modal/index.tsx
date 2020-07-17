@@ -1,11 +1,11 @@
-import * as React from 'react'
+import React, { useRef, useLayoutEffect, MouseEvent } from 'react'
 import classnames from 'classnames'
 import { createPortal } from 'react-dom'
 import { BaseComponentProps } from '@models'
 import { Button } from '@components'
+import { noop } from '@lib/helper'
+import { useI18n } from '@stores'
 import './style.scss'
-
-const noop = () => {}
 
 interface ModalProps extends BaseComponentProps {
     // show modal
@@ -33,75 +33,64 @@ interface ModalProps extends BaseComponentProps {
     onClose?: typeof noop
 }
 
-export class Modal extends React.Component<ModalProps, {}> {
+export function Modal (props: ModalProps) {
+    const {
+        show = true,
+        title = 'Modal',
+        size = 'small',
+        footer = true,
+        onOk = noop,
+        onClose = noop,
+        bodyClassName,
+        bodyStyle,
+        className,
+        style,
+        children
+    } = props
 
-    static defaultProps: ModalProps = {
-        show: true,
-        title: 'Modal',
-        size: 'small',
-        footer: true,
-        onOk: noop,
-        onClose: noop
-    }
+    const { useTranslation } = useI18n()
+    const { t } = useTranslation('Modal')
 
-    // portal container
-    $container: Element
+    const portalRef = useRef<HTMLDivElement>(document.createElement('div'))
+    const maskRef = useRef<HTMLDivElement>()
 
-    $modal = React.createRef<HTMLDivElement>()
+    useLayoutEffect(() => {
+        document.body.appendChild(portalRef.current)
+        return () => document.body.removeChild(portalRef.current)
+    }, [])
 
-    $mask = React.createRef<HTMLDivElement>()
-
-    constructor (props) {
-        super(props)
-
-        // create container element
-        const container = document.createElement('div')
-        document.body.appendChild(container)
-        this.$container = container
-    }
-
-    componentWillUnmount () {
-        document.body.removeChild(this.$container)
-    }
-
-    private handleMaskClick = (e) => {
-        const { onClose } = this.props
-
-        if (e.target === this.$mask) {
+    function handleMaskClick (e: MouseEvent) {
+        if (e.target === maskRef.current) {
             onClose()
         }
     }
 
-    render () {
-        const { show, size, title, footer, children, className, bodyClassName, style, bodyStyle, onOk, onClose } = this.props
-        const modal = (
+    const modal = (
+        <div
+            className={classnames('modal-mask', { 'modal-show': show })}
+            ref={maskRef}
+            onClick={handleMaskClick}
+        >
             <div
-                className={classnames('modal-mask', { 'modal-show': show })}
-                ref={this.$mask}
-                onClick={this.handleMaskClick}
+                className={classnames('modal', `modal-${size}`, className)}
+                style={style}
             >
+                <div className="modal-title">{title}</div>
                 <div
-                    className={classnames('modal', `modal-${size}`, className)}
-                    style={style}
-                    ref={this.$modal}
-                >
-                    <div className="modal-title">{title}</div>
-                    <div
-                        className={classnames('modal-body', bodyClassName)}
-                        style={bodyStyle}
-                    >{children}</div>
-                    {
-                        footer && (
-                            <div className="footer">
-                                <Button onClick={() => onClose()}>取 消</Button>
-                                <Button type="primary" onClick={() => onOk()}>确 定</Button>
-                            </div>
-                        )
-                    }
-                </div>
+                    className={classnames('modal-body', bodyClassName)}
+                    style={bodyStyle}
+                >{children}</div>
+                {
+                    footer && (
+                        <div className="footer">
+                            <Button onClick={() => onClose()}>{ t('cancel') }</Button>
+                            <Button type="primary" onClick={() => onOk()}>{ t('ok') }</Button>
+                        </div>
+                    )
+                }
             </div>
-        )
+        </div>
+    )
 
-        return createPortal(modal, this.$container)
-    }
+    return createPortal(modal, portalRef.current)
 }

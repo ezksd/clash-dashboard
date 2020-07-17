@@ -10,14 +10,7 @@ export function removeLocalStorageItem (key: string) {
     return window.localStorage.removeItem(key)
 }
 
-export function randomNumber (min: number, max: number) {
-    return (min + Math.random() * (max - min)) >> 0
-}
-
-export function sample<T> (arr: T[]) {
-    return arr[randomNumber(0, arr.length)]
-}
-
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 export function noop () {}
 
 /**
@@ -32,8 +25,6 @@ export async function to <T, E = Error> (promise: Promise<T>): Promise<[T, E]> {
         return [null as T, e]
     }
 }
-
-export type Partial<T> = { [P in keyof T]?: T[P] }
 
 export function partition<T> (arr: T[], fn: (T) => boolean): [T[], T[]] {
     const left: T[] = []

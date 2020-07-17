@@ -6,7 +6,7 @@
 
 @font-face {
     font-family: "clash-iconfont";
-    src: url('//at.alicdn.com/t/font_841708_6gtmjlak9k2.ttf?t=1551607902712') format('truetype');
+    src: url('//at.alicdn.com/t/font_841708_ok9czskbhel.ttf?t=1576162884356') format('truetype');
 }
 
 .clash-iconfont {
@@ -17,6 +17,10 @@
     -moz-osx-font-smoothing: grayscale;
     color: $color-primary-dark;
 }
+
+.icon-update::before { content: "\e66f"; }
+
+.icon-healthcheck::before { content: "\e63c"; }
 
 .icon-speed::before { content: "\e61b"; }
 
@@ -45,3 +49,11 @@
 .icon-show::before { content: "\e60e"; }
 
 .icon-hide::before { content: "\e60f"; }
+
+.icon-sort::before { content: "\e8b3"; }
+
+.icon-sort-descending::before { content: "\e8b4"; }
+
+.icon-sort-ascending::before { content: "\e8b5"; }
+
+.icon-close-all::before { content: "\e71b"; }

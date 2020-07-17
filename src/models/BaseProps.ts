@@ -1,23 +1,14 @@
-import { CSSProperties } from 'react'
+import { CSSProperties, ReactNode } from 'react'
 import { RouteComponentProps } from 'react-router'
-import { RouterStore, ConfigStore } from '@stores'
 
 /**
  * expose base router component props
  * and mobx store to props
  */
-export interface BaseRouterProps extends RouteComponentProps<any>, BaseProps {}
-
-/**
- * use when component is inject by mobx
- */
-export interface BaseProps extends BaseComponentProps {
-    styles?: any
-    router?: RouterStore
-    store?: ConfigStore
-}
+export type BaseRouterProps = RouteComponentProps
 
 export interface BaseComponentProps {
     className?: string
+    children?: ReactNode
     style?: CSSProperties
 }

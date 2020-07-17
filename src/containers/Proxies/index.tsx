@@ -1,67 +1,157 @@
-import * as React from 'react'
-import { translate } from 'react-i18next'
-import { inject, observer } from 'mobx-react'
-import { storeKeys } from '@lib/createStore'
+import React, { useMemo } from 'react'
+import useSWR from 'swr'
 import EE from '@lib/event'
-import { Card, Header, Icon } from '@components'
-import { I18nProps, BaseRouterProps } from '@models'
+import { useRound } from '@lib/hook'
+import { Card, Header, Icon, Checkbox } from '@components'
+import { useI18n, useConfig, useProxy, useProxyProviders, useGeneral } from '@stores'
+import * as API from '@lib/request'
 
-import { Proxy, Group } from './components'
+import { Proxy, Group, Provider } from './components'
 import './style.scss'
 
-interface ProxiesProps extends BaseRouterProps, I18nProps {}
-
-interface ProxiesState {
+enum sortType {
+    None,
+    Asc,
+    Desc
 }
 
-@inject(...storeKeys)
-@observer
-class Proxies extends React.Component<ProxiesProps, ProxiesState> {
-    componentDidMount () {
-        this.props.store.fetchData()
-    }
+const sortMap = {
+    [sortType.None]: 'sort',
+    [sortType.Asc]: 'sort-ascending',
+    [sortType.Desc]: 'sort-descending'
+}
 
-    handleNotitySpeedTest = () => {
-        EE.notifySpeedTest()
-    }
+export function compareDesc (a: API.Proxy, b: API.Proxy) {
+    const lastDelayA = a.history.length ? a.history.slice(-1)[0].delay : 0
+    const lastDelayB = b.history.length ? b.history.slice(-1)[0].delay : 0
+    return (lastDelayB || Number.MAX_SAFE_INTEGER) - (lastDelayA || Number.MAX_SAFE_INTEGER)
+}
 
-    render () {
-        const { t, store } = this.props
+function ProxyGroups () {
+    const { groups, global } = useProxy()
+    const { data: config, set: setConfig } = useConfig()
+    const { general } = useGeneral()
+    const { useTranslation } = useI18n()
+    const { t } = useTranslation('Proxies')
 
-        return (
-            <div className="page">
-                <div className="proxies-container">
-                    <Header title={t('groupTitle')} />
-                    <Card className="proxies-group-card">
-                        <ul className="proxies-group-list">
-                            {
-                                store.data.proxyGroup.map(p => (
-                                    <li className="proxies-group-item" key={p.name}>
-                                        <Group config={p} />
-                                    </li>
-                                ))
-                            }
-                        </ul>
-                    </Card>
-                </div>
-                <div className="proxies-container">
-                    <Header title={t('title')}>
-                        <Icon type="speed" size={20} />
-                        <span className="proxies-speed-test" onClick={this.handleNotitySpeedTest}>{t('speedTestText')}</span>
-                    </Header>
-                    <ul className="proxies-list">
+    const list = useMemo(
+        () => general.mode === 'global' ? [global] : groups,
+        [general, groups, global]
+    )
+
+    return <>
+        {
+            list.length !== 0 &&
+            <div className="proxies-container">
+                <Header title={t('groupTitle')}>
+                    <Checkbox
+                        className="connections-filter"
+                        checked={config.breakConnections}
+                        onChange={value => setConfig('breakConnections', value)}>
+                        {t('breakConnectionsText')}
+                    </Checkbox>
+                </Header>
+                <Card className="proxies-group-card">
+                    <ul className="proxies-group-list">
                         {
-                            store.data.proxy.map(p => (
-                                <li key={p.name}>
-                                    <Proxy config={p} />
+                            list.map(p => (
+                                <li className="proxies-group-item" key={p.name}>
+                                    <Group config={p} />
                                 </li>
                             ))
                         }
                     </ul>
-                </div>
+                </Card>
             </div>
-        )
-    }
+        }
+    </>
 }
 
-export default translate(['Proxies'])(Proxies)
+function ProxyProviders () {
+    const { providers, update } = useProxyProviders()
+    const { useTranslation } = useI18n()
+    const { t } = useTranslation('Proxies')
+
+    useSWR('providers', update)
+
+    return <>
+        {
+            providers.length !== 0 &&
+            <div className="proxies-container">
+                <Header title={t('providerTitle')} />
+                <ul className="proxies-providers-list">
+                    {
+                        providers.map(p => (
+                            <li className="proxies-providers-item" key={p.name}>
+                                <Provider provider={p} />
+                            </li>
+                        ))
+                    }
+                </ul>
+            </div>
+        }
+    </>
+}
+
+function Proxies () {
+    const { proxies } = useProxy()
+    const { update: updateGeneral } = useGeneral()
+    const { useTranslation } = useI18n()
+    const { t } = useTranslation('Proxies')
+
+    useSWR('general', updateGeneral)
+
+    function handleNotitySpeedTest () {
+        EE.notifySpeedTest()
+    }
+
+    const { current: sort, next } = useRound(
+        [sortType.Asc, sortType.Desc, sortType.None]
+    )
+    const sortedProxies = useMemo(() => {
+        switch (sort) {
+        case sortType.Desc:
+            return proxies.slice().sort((a, b) => compareDesc(a, b))
+        case sortType.Asc:
+            return proxies.slice().sort((a, b) => -1 * compareDesc(a, b))
+        default:
+            return proxies.slice()
+        }
+    }, [sort, proxies])
+    const handleSort = next
+
+    return <>
+        {
+            sortedProxies.length !== 0 &&
+            <div className="proxies-container">
+                <Header title={t('title')}>
+                    <Icon className="proxies-action-icon" type={sortMap[sort]} onClick={handleSort} size={20} />
+                    <Icon className="proxies-action-icon" type="speed" size={20} />
+                    <span className="proxies-speed-test" onClick={handleNotitySpeedTest}>{t('speedTestText')}</span>
+                </Header>
+                <ul className="proxies-list">
+                    {
+                        sortedProxies.map(p => (
+                            <li key={p.name}>
+                                <Proxy config={p} />
+                            </li>
+                        ))
+                    }
+                </ul>
+            </div>
+        }
+    </>
+}
+
+export default function ProxyContainer () {
+    const { update: updateProxy } = useProxy()
+    useSWR('proxies', updateProxy)
+
+    return (
+        <div className="page">
+            <ProxyGroups />
+            <ProxyProviders />
+            <Proxies />
+        </div>
+    )
+}

@@ -6,7 +6,6 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin")
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 // const OfflinePlugin = require('offline-plugin')
 const autoprefixer = require('autoprefixer')
-const Fiber = require('fibers')
 const devMode = process.env.NODE_ENV !== 'production'
 
 module.exports = {
@@ -23,7 +22,7 @@ module.exports = {
             {
                 test: /\.tsx?$/,
                 enforce: 'pre',
-                use: ['tslint-loader']
+                use: ['eslint-loader']
             },
             {
                 test: /\.js$/,
@@ -40,7 +39,7 @@ module.exports = {
                     devMode ? 'style-loader' : MiniCssExtractPlugin.loader,
                     { loader: 'css-loader', options: { importLoaders: 1 } },
                     { loader: 'postcss-loader', options: { plugins: [autoprefixer] } },
-                    { loader: 'sass-loader', options: { implementation: require('sass'), fiber: Fiber } }
+                    { loader: 'sass-loader', options: { implementation: require('sass') } }
                 ],
             },
             {

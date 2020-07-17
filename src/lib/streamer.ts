@@ -1,9 +1,10 @@
 import { to } from '@lib/helper'
-import * as EventEmitter from 'eventemitter3'
+import EventEmitter from 'eventemitter3'
 
 export interface Config {
     url: string
-    headers?: { [key: string]: string }
+    useWebsocket: boolean
+    token?: string
     bufferLength?: number
     retryInterval?: number
 }
@@ -24,7 +25,33 @@ export class StreamReader<T> {
             config
         )
 
-        this.loop()
+        this.config.useWebsocket
+            ? this.websocketLoop()
+            : this.loop()
+    }
+
+    protected websocketLoop () {
+        const url = new URL(this.config.url)
+        url.protocol = location.protocol === 'http:' ? 'ws:' : 'wss:'
+        url.searchParams.set('token', this.config.token)
+
+        const connection = new WebSocket(url.toString())
+        connection.addEventListener('message', msg => {
+            const data = JSON.parse(msg.data)
+            this.EE.emit('data', [data])
+            if (this.config.bufferLength > 0) {
+                this.innerBuffer.push(data)
+                if (this.innerBuffer.length > this.config.bufferLength) {
+                    this.innerBuffer.splice(0, this.innerBuffer.length - this.config.bufferLength)
+                }
+            }
+        })
+
+        connection.addEventListener('close', () => setTimeout(this.websocketLoop, this.config.retryInterval))
+        connection.addEventListener('error', err => {
+            this.EE.emit('error', err)
+            setTimeout(this.websocketLoop, this.config.retryInterval)
+        })
     }
 
     protected async loop () {
@@ -32,7 +59,7 @@ export class StreamReader<T> {
             this.config.url,
             {
                 mode: 'cors',
-                headers: this.config.headers
+                headers: this.config.token ? { Authorization: `Bearer ${this.config.token}` } : {}
             }
         ))
         if (err) {
@@ -72,11 +99,11 @@ export class StreamReader<T> {
         }
     }
 
-    subscribe<T> (event: string, callback: (data: T) => void) {
+    subscribe (event: string, callback: (data: T[]) => void) {
         this.EE.addListener(event, callback)
     }
 
-    unsubscribe<T> (event: string, callback: (data: T) => void) {
+    unsubscribe (event: string, callback: (data: T[]) => void) {
         this.EE.removeListener(event, callback)
     }
 

@@ -8,8 +8,8 @@
 <h4 align="center">Web Dashboard for Clash, now host on ClashX</h4>
 
 <p align="center">
-    <a href="https://travis-ci.org/Dreamacro/clash-dashboard">
-        <img src="https://travis-ci.org/Dreamacro/clash-dashboard.svg?branch=master" alt="Travis-CI">
+    <a href="https://github.com/Dreamacro/clash-dashboard/actions">
+        <img src="https://img.shields.io/github/workflow/status/Dreamacro/clash-dashboard/Deploy?style=flat-square" alt="Github Actions">
     </a>
 </p>
 

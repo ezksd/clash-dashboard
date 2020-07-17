@@ -1,67 +1,59 @@
-import * as React from 'react'
-import * as dayjs from 'dayjs'
-import { translate } from 'react-i18next'
-import { I18nProps } from '@models'
+import React, { useLayoutEffect, useEffect, useRef, useState } from 'react'
+import dayjs from 'dayjs'
+import { useI18n } from '@stores'
 import { Card, Header } from '@components'
-import './style.scss'
 import { getLogsStreamReader } from '@lib/request'
+import { StreamReader } from '@lib/streamer'
+import { Log } from '@models/Log'
+import './style.scss'
 
-interface Log {
-    type: string
-    payload: string,
-    time: Date
-}
+export default function Logs () {
+    const listRef = useRef<HTMLUListElement>()
+    const logsRef = useRef<Log[]>([])
+    const [logs, setLogs] = useState<Log[]>([])
+    const { useTranslation } = useI18n()
+    const { t } = useTranslation('Logs')
 
-interface LogsProps extends I18nProps {}
-
-interface LogsState {
-    logs: Log[]
-}
-
-class Logs extends React.Component<LogsProps, LogsState> {
-    state: LogsState = {
-        logs: []
-    }
-
-    private streamReader = null
-    private listRef = React.createRef<HTMLUListElement>()
-    async componentDidMount () {
-        this.streamReader = await getLogsStreamReader()
-        let logs = this.streamReader.buffer()
-        this.setState({ logs }, () => this.scrollToBottom())
-        this.streamReader.subscribe('data', (data) => {
-            logs = [].concat(this.state.logs, data.map(d => ({ ...d, time: new Date() })))
-            this.setState({ logs }, () => this.scrollToBottom())
-        })
-    }
-
-    scrollToBottom = () => {
-        const ul = this.listRef.current
+    useLayoutEffect(() => {
+        const ul = listRef.current
         ul.scrollTop = ul.scrollHeight
-    }
+    }, [logsRef.current])
 
-    render () {
-        const { t } = this.props
-        return (
-            <div className="page">
-                <Header title={ t('title') } />
-                <Card className="logs-card">
-                    <ul className="logs-panel" ref={this.listRef}>
-                        {
-                            this.state.logs.map(
-                                (log, index) => (
-                                    <li key={index}>
-                                        <span className="logs-panel-time">{ dayjs(log.time).format('YYYY-MM-DD HH:mm:ss') }</span>
-                                        <span>[{ log.type }] { log.payload }</span>
-                                    </li>
-                                )
+    useEffect(() => {
+        const streamReader: StreamReader<Log> = null
+
+        function handleLog (newLogs: Log[]) {
+            logsRef.current = logsRef.current.slice().concat(newLogs.map(d => ({ ...d, time: new Date() })))
+            setLogs(logsRef.current)
+        }
+
+        (async function () {
+            const streamReader = await getLogsStreamReader()
+            logsRef.current = streamReader.buffer()
+            setLogs(logsRef.current)
+            streamReader.subscribe('data', handleLog)
+        }())
+
+        return () => streamReader && streamReader.unsubscribe('data', handleLog)
+    }, [])
+
+    return (
+        <div className="page">
+            <Header title={ t('title') } />
+            <Card className="logs-card">
+                <ul className="logs-panel" ref={listRef}>
+                    {
+                        logs.map(
+                            (log, index) => (
+                                <li key={index}>
+                                    <span className="logs-panel-time">{ dayjs(log.time).format('YYYY-MM-DD HH:mm:ss') }</span>
+                                    <span>[{ log.type }] { log.payload }</span>
+                                </li>
                             )
-                        }
-                    </ul>
-                </Card>
-            </div>
-        )
-    }
+                        )
+                    }
+                </ul>
+            </Card>
+        </div>
+    )
 }
-
-export default translate(['Logs'])(Logs)

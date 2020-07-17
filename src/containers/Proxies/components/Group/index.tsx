@@ -1,43 +1,67 @@
-import * as React from 'react'
-import { inject } from 'mobx-react'
-import { BaseComponentProps } from '@models'
-import { ConfigStore } from '@stores'
-import { changeProxySelected, Group as IGroup } from '@lib/request'
-import { storeKeys } from '@lib/createStore'
-import { Tags } from '@components'
+import React, { useMemo } from 'react'
+import { useRecoilValue } from 'recoil'
+import { useProxy, useConfig, proxyMapping } from '@stores'
+import { changeProxySelected, Group as IGroup, getConnections, closeConnection } from '@lib/request'
+import { Tags, Tag } from '@components'
 import './style.scss'
 
-interface GroupProps extends BaseComponentProps {
+interface GroupProps {
     config: IGroup
-    store?: ConfigStore
 }
 
-@inject(...storeKeys)
-export class Group extends React.Component<GroupProps, {}> {
-    handleChangeProxySelected = async (name: string) => {
-        await changeProxySelected(this.props.config.name, name)
-        await this.props.store.fetchData()
+export function Group (props: GroupProps) {
+    const { update } = useProxy()
+    const proxyMap = useRecoilValue(proxyMapping)
+    const { data: Config } = useConfig()
+    const { config } = props
+
+    async function handleChangeProxySelected (name: string) {
+        await changeProxySelected(props.config.name, name)
+        await update()
+        if (Config.breakConnections) {
+            const list: string[] = []
+            const snapshot = await getConnections()
+            for (const connection of snapshot.data.connections) {
+                if (connection.chains.includes(props.config.name)) {
+                    list.push(connection.id)
+                }
+            }
+
+            for (const id of list) {
+                closeConnection(id)
+            }
+        }
     }
 
-    render () {
-        const { config } = this.props
-        const canClick = config.type === 'Selector'
-        return (
-            <div className="proxy-group">
-                <div className="proxy-group-part">
-                    <span className="proxy-group-name">{ config.name }</span>
-                    <span className="proxy-group-type">{ config.type }</span>
-                </div>
-                <div className="proxy-group-tags-container">
-                    <Tags
-                        className="proxy-group-tags"
-                        data={config.all}
-                        onClick={this.handleChangeProxySelected}
-                        select={config.now}
-                        canClick={canClick}
-                        rowHeight={30} />
-                </div>
+    const errSet = useMemo(() => {
+        const set = new Set<string>()
+        for (const proxy of config.all) {
+            const history = proxyMap.get(proxy)?.history
+            if (history?.length && history.slice(-1)[0].delay === 0) {
+                set.add(proxy)
+            }
+        }
+
+        return set
+    }, [proxyMap])
+
+    const canClick = config.type === 'Selector'
+    return (
+        <div className="proxy-group">
+            <div className="proxy-group-part">
+                <span className="proxy-group-name">{ config.name }</span>
+                <Tag className="proxy-group-type">{ config.type }</Tag>
             </div>
-        )
-    }
+            <div className="proxy-group-tags-container">
+                <Tags
+                    className="proxy-group-tags"
+                    data={config.all}
+                    onClick={handleChangeProxySelected}
+                    errSet={errSet}
+                    select={config.now}
+                    canClick={canClick}
+                    rowHeight={30} />
+            </div>
+        </div>
+    )
 }
